@@ -3,8 +3,8 @@
 ## Quick Test
 Run both verification scripts:
 ```bash
-php test-fix.php
-php test-offset-drift.php
+php tests/test-fix.php
+php tests/test-offset-drift.php
 ```
 
 Both should show all tests passing.

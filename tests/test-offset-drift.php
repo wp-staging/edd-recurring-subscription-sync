@@ -8,7 +8,7 @@
 echo "=== Testing Offset Drift Fix ===\n\n";
 
 // Read the sync processor file
-$file_content = file_get_contents(__DIR__ . '/class-sync-processor.php');
+$file_content = file_get_contents(__DIR__ . '/../class-sync-processor.php');
 
 echo "TEST 1: Verify get_subscription_ids() method exists\n";
 echo "-----------------------------------------------------\n";

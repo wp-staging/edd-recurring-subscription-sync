@@ -127,6 +127,6 @@ $sql = $wpdb->prepare(
   - Completely rewrote `process_chunk()` to use ID-based processing
 
 ## Files Created
-- `test-fix.php` - Verification test for LIMIT 500 fix
-- `test-offset-drift.php` - Verification test for offset drift fix
+- `tests/test-fix.php` - Verification test for LIMIT 500 fix
+- `tests/test-offset-drift.php` - Verification test for offset drift fix
 - `FIX-NOTES.md` - This documentation

@@ -5,7 +5,7 @@
 
 echo "=== Testing LIMIT 500 Fix ===\n\n";
 
-$file_content = file_get_contents(__DIR__ . '/class-sync-processor.php');
+$file_content = file_get_contents(__DIR__ . '/../class-sync-processor.php');
 
 echo "TEST 1: Verify LIMIT 500 was removed from get_affected_subscriptions()\n";
 echo "------------------------------------------------------------------------\n";
