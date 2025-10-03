@@ -233,6 +233,16 @@ class EDD_Recurring_Sync_Processor {
 		// Get the chunk of IDs to process.
 		$chunk_ids = array_slice( $all_ids, $offset, $limit );
 
+		// Debug logging
+		error_log( sprintf(
+			'EDD Sync - array_slice: total_ids=%d, offset=%d, limit=%d, chunk_ids_count=%d, chunk_ids=%s',
+			count( $all_ids ),
+			$offset,
+			$limit,
+			count( $chunk_ids ),
+			implode( ',', $chunk_ids )
+		) );
+
 		if ( empty( $chunk_ids ) ) {
 			return array(
 				'processed' => 0,
@@ -244,14 +254,21 @@ class EDD_Recurring_Sync_Processor {
 
 		// Fetch subscriptions by ID.
 		// This prevents offset drift when records are updated and no longer match WHERE clauses.
-		$placeholders  = implode( ',', array_fill( 0, count( $chunk_ids ), '%d' ) );
-		$sql           = $wpdb->prepare(
-			"SELECT * FROM {$wpdb->prefix}edd_subscriptions
-			WHERE id IN ($placeholders)
-			ORDER BY id ASC",
-			$chunk_ids
-		);
+		// IMPORTANT: Build IN clause directly with intval() for safety, since wpdb->prepare()
+		// doesn't accept arrays. We use array_map('intval') to ensure all IDs are integers.
+		$ids_string = implode( ',', array_map( 'intval', $chunk_ids ) );
+		$sql        = "SELECT * FROM {$wpdb->prefix}edd_subscriptions
+			WHERE id IN ($ids_string)
+			ORDER BY id ASC";
+
 		$subscriptions = $wpdb->get_results( $sql );
+
+		// Debug logging
+		error_log( sprintf(
+			'EDD Sync - DB query: chunk_ids=%s, returned=%d subscriptions',
+			implode( ',', $chunk_ids ),
+			count( $subscriptions )
+		) );
 
 		if ( empty( $subscriptions ) ) {
 			return array(

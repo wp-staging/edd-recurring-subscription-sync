@@ -53,7 +53,8 @@ if (strpos($file_content, 'array_slice') !== false) {
 echo "\nTEST 5: Verify WHERE id IN (...) query is used\n";
 echo "------------------------------------------------\n";
 
-if (preg_match('/WHERE id IN.*placeholders/s', $file_content)) {
+if (preg_match('/WHERE id IN.*\$ids_string/s', $file_content) ||
+    preg_match('/WHERE id IN.*intval/s', $file_content)) {
     echo "✓ PASSED: Using WHERE id IN query to fetch by specific IDs\n";
 } else {
     echo "❌ FAILED: Not using ID-based query\n";
