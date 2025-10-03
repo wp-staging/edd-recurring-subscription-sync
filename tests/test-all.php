@@ -11,7 +11,8 @@ $tests = [
     'test-fix.php' => 'LIMIT 500 & ID-based Processing',
     'test-offset-drift.php' => 'Offset Drift Prevention',
     'test-count-mismatch.php' => 'Count Mismatch Fix',
-    'test-wpdb-fix.php' => 'wpdb->prepare() Array Bug Fix'
+    'test-wpdb-fix.php' => 'wpdb->prepare() Array Bug Fix',
+    'test-with-sample-data.php' => 'Sample Data Simulation'
 ];
 
 $all_passed = true;
@@ -24,7 +25,9 @@ foreach ($tests as $test_file => $test_name) {
     $output = shell_exec("php " . __DIR__ . "/$test_file 2>&1");
 
     // Check if all tests passed
-    $passed = strpos($output, '=== All Tests Passed! ===') !== false;
+    $passed = strpos($output, '=== All Tests Passed! ===') !== false ||
+              strpos($output, '🎉 ALL TESTS PASSED! 🎉') !== false ||
+              strpos($output, '🎉 ALL SAMPLE DATA TESTS PASSED! 🎉') !== false;
     $failed_count = substr_count($output, '❌ FAILED');
 
     if ($passed && $failed_count === 0) {
@@ -60,7 +63,8 @@ if ($all_passed) {
     echo "  ✓ Bug #1: LIMIT 500 removed\n";
     echo "  ✓ Bug #2: Offset drift prevented with ID-based processing\n";
     echo "  ✓ Bug #3: Count mismatch fixed with single data source\n";
-    echo "  ✓ Bug #4: wpdb->prepare() array parameter bug fixed\n\n";
+    echo "  ✓ Bug #4: wpdb->prepare() array parameter bug fixed\n";
+    echo "  ✓ Bonus: Sample data simulation demonstrates 100% completion\n\n";
 
     echo "Next steps:\n";
     echo "  1. Test in WordPress environment with live data\n";

@@ -1,0 +1,54 @@
+# Sample Subscription Data for Testing
+# Format: ID|status|expiration|gateway|profile_id
+# This simulates 50 subscriptions in the database
+
+1|expired|2025-12-31 23:59:59|stripe|sub_1234567890ABC
+2|expired|2025-11-30 23:59:59|stripe|sub_1234567890ABD
+3|expired|2025-10-31 23:59:59|stripe|sub_1234567890ABE
+4|active|2025-09-30 23:59:59|stripe|sub_1234567890ABF
+5|expired|2025-08-31 23:59:59|stripe|sub_1234567890ABG
+6|expired|2025-07-31 23:59:59|stripe|sub_1234567890ABH
+7|expired|2025-06-30 23:59:59|stripe|sub_1234567890ABI
+8|active|2025-05-31 23:59:59|stripe|sub_1234567890ABJ
+9|expired|2025-04-30 23:59:59|stripe|sub_1234567890ABK
+10|expired|2025-03-31 23:59:59|stripe|sub_1234567890ABL
+11|expired|2026-02-28 23:59:59|stripe|sub_1234567890ABM
+12|expired|2026-01-31 23:59:59|stripe|sub_1234567890ABN
+13|expired|2025-12-31 23:59:59|stripe|sub_1234567890ABO
+14|active|2025-11-30 23:59:59|stripe|sub_1234567890ABP
+15|expired|2025-10-31 23:59:59|stripe|sub_1234567890ABQ
+16|expired|2025-09-30 23:59:59|stripe|sub_1234567890ABR
+17|expired|2025-08-31 23:59:59|stripe|sub_1234567890ABS
+18|active|2025-07-31 23:59:59|stripe|sub_1234567890ABT
+19|expired|2025-06-30 23:59:59|stripe|sub_1234567890ABU
+20|expired|2025-05-31 23:59:59|stripe|sub_1234567890ABV
+21|expired|2026-04-30 23:59:59|stripe|sub_1234567890ABW
+22|expired|2026-03-31 23:59:59|stripe|sub_1234567890ABX
+23|expired|2026-02-28 23:59:59|stripe|sub_1234567890ABY
+24|active|2026-01-31 23:59:59|stripe|sub_1234567890ABZ
+25|expired|2025-12-31 23:59:59|stripe|sub_1234567890AC1
+26|expired|2025-11-30 23:59:59|stripe|sub_1234567890AC2
+27|expired|2025-10-31 23:59:59|stripe|sub_1234567890AC3
+28|active|2025-09-30 23:59:59|stripe|sub_1234567890AC4
+29|expired|2025-08-31 23:59:59|stripe|sub_1234567890AC5
+30|expired|2025-07-31 23:59:59|stripe|sub_1234567890AC6
+31|expired|2026-06-30 23:59:59|stripe|sub_1234567890AC7
+32|expired|2026-05-31 23:59:59|stripe|sub_1234567890AC8
+33|expired|2026-04-30 23:59:59|stripe|sub_1234567890AC9
+34|active|2026-03-31 23:59:59|stripe|sub_1234567890AD1
+35|expired|2026-02-28 23:59:59|stripe|sub_1234567890AD2
+36|expired|2026-01-31 23:59:59|stripe|sub_1234567890AD3
+37|expired|2025-12-31 23:59:59|stripe|sub_1234567890AD4
+38|active|2025-11-30 23:59:59|stripe|sub_1234567890AD5
+39|expired|2025-10-31 23:59:59|stripe|sub_1234567890AD6
+40|expired|2025-09-30 23:59:59|stripe|sub_1234567890AD7
+41|expired|2026-08-31 23:59:59|stripe|sub_1234567890AD8
+42|expired|2026-07-31 23:59:59|stripe|sub_1234567890AD9
+43|expired|2026-06-30 23:59:59|stripe|sub_1234567890AE1
+44|active|2026-05-31 23:59:59|stripe|sub_1234567890AE2
+45|expired|2026-04-30 23:59:59|stripe|sub_1234567890AE3
+46|expired|2026-03-31 23:59:59|stripe|sub_1234567890AE4
+47|expired|2026-02-28 23:59:59|stripe|sub_1234567890AE5
+48|active|2026-01-31 23:59:59|stripe|sub_1234567890AE6
+49|expired|2025-12-31 23:59:59|stripe|sub_1234567890AE7
+50|expired|2025-11-30 23:59:59|stripe|sub_1234567890AE8
