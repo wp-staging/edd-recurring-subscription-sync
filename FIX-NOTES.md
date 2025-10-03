@@ -1,9 +1,9 @@
-# Fix: Processing Stops at 50% in Live Mode
+# Fix: Processing Stops at 50-60% in Live Mode
 
 ## Problem
-When running the subscription sync in Live mode (expired with future dates), the processing would stop at 50% even though there were more subscriptions to process.
+When running the subscription sync in Live mode (expired with future dates), the processing would stop at various percentages (50%, 60%, 75%, etc.) even though there were more subscriptions to process. The percentage varied unpredictably.
 
-## Root Causes
+## Root Causes (3 Distinct Bugs)
 
 ### Issue #1: Hard-coded LIMIT 500
 In `class-sync-processor.php`, the `get_affected_subscriptions()` method had a hard-coded `LIMIT 500` on line 55:
@@ -119,6 +119,34 @@ $sql = $wpdb->prepare(
 - Even if a subscription's status changes, it's still processed
 - No offset drift because we're not using OFFSET anymore
 
+### Issue #3: Count Mismatch (THE CRITICAL BUG) 🔴
+**This was the main cause of the 60% bug!**
+
+The count and IDs came from separate database queries at different times:
+
+**The Problem:**
+1. `initialize_sync()` at time T1 → Queries DB, stores 600 IDs
+2. `get_subscription_count()` at time T2 → Queries DB, returns 1000
+3. JavaScript expects 1000, but only 600 IDs stored
+4. After 600 processed, array_slice returns empty
+5. Progress: 600/1000 = 60% and stops
+
+**Why different results?**
+- Database state changed between T1 and T2
+- Different current_time() calculations
+- Other processes updating records
+- Race conditions
+
+**Fix:**
+```php
+// BEFORE - get_subscription_count() in class-ajax-handler.php
+$count = $wpdb->get_var("SELECT COUNT(*) ..."); // Fresh query!
+
+// AFTER
+$ids = get_transient('edd_recurring_sync_ids'); // Use stored IDs
+return count($ids); // Always matches what we'll process
+```
+
 ## Files Modified
 - `class-sync-processor.php`:
   - Line 55: Removed LIMIT 500
@@ -126,7 +154,14 @@ $sql = $wpdb->prepare(
   - Updated `initialize_log()` to store IDs
   - Completely rewrote `process_chunk()` to use ID-based processing
 
+- `class-ajax-handler.php`:
+  - Rewrote `get_subscription_count()` to use stored IDs
+  - Removed separate database COUNT query
+  - Ensures count always matches stored IDs
+
 ## Files Created
 - `tests/test-fix.php` - Verification test for LIMIT 500 fix
 - `tests/test-offset-drift.php` - Verification test for offset drift fix
+- `tests/test-count-mismatch.php` - Verification test for count mismatch fix
+- `tests/BUGFIX-ANALYSIS.md` - Complete analysis of all three bugs
 - `FIX-NOTES.md` - This documentation

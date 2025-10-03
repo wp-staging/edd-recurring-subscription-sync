@@ -1,13 +1,14 @@
 # Testing the 50% Bug Fix
 
 ## Quick Test
-Run both verification scripts:
+Run all verification scripts:
 ```bash
 php tests/test-fix.php
 php tests/test-offset-drift.php
+php tests/test-count-mismatch.php
 ```
 
-Both should show all tests passing.
+All three should show all tests passing.
 
 ## Manual Testing in WordPress
 
