@@ -34,7 +34,7 @@ class EDD_Recurring_Sync_Processor {
 	/**
 	 * Get affected subscriptions.
 	 *
-	 * @param string $mode Sync mode: 'expired_future' or 'all_active'.
+	 * @param string $mode Sync mode: 'expired_future', 'failing', or 'all_active'.
 	 * @param string $date Optional. Only sync subscriptions updated after this date (Y-m-d H:i:s format).
 	 * @return array
 	 */
@@ -44,16 +44,42 @@ class EDD_Recurring_Sync_Processor {
 		$current_date = current_time( 'mysql' );
 
 		if ( 'expired_future' === $mode ) {
-			// Original mode: expired subscriptions with future expiration dates.
-			$sql = $wpdb->prepare(
-				"SELECT * FROM {$wpdb->prefix}edd_subscriptions
+			// Expired subscriptions with future expiration dates only.
+			$base_sql = "SELECT * FROM {$wpdb->prefix}edd_subscriptions
 				WHERE status = 'expired'
 				AND expiration > %s
 				AND gateway = 'stripe'
-				AND profile_id != ''
-				ORDER BY id ASC",
-				$current_date
-			);
+				AND profile_id != ''";
+
+			// Add date filter if provided.
+			if ( ! empty( $date ) ) {
+				$sql = $wpdb->prepare(
+					$base_sql . " AND date_created >= %s ORDER BY id ASC",
+					$current_date,
+					$date
+				);
+			} else {
+				$sql = $wpdb->prepare(
+					$base_sql . " ORDER BY id ASC",
+					$current_date
+				);
+			}
+		} elseif ( 'failing' === $mode ) {
+			// Failing subscriptions only.
+			$base_sql = "SELECT * FROM {$wpdb->prefix}edd_subscriptions
+				WHERE status = 'failing'
+				AND gateway = 'stripe'
+				AND profile_id != ''";
+
+			// Add date filter if provided.
+			if ( ! empty( $date ) ) {
+				$sql = $wpdb->prepare(
+					$base_sql . " AND date_created >= %s ORDER BY id ASC",
+					$date
+				);
+			} else {
+				$sql = $base_sql . " ORDER BY id ASC";
+			}
 		} else {
 			// New mode: all subscriptions (any status) to verify against Stripe.
 			$base_sql = "SELECT * FROM {$wpdb->prefix}edd_subscriptions
@@ -79,7 +105,7 @@ class EDD_Recurring_Sync_Processor {
 	/**
 	 * Get subscription IDs for a sync session.
 	 *
-	 * @param string $mode Sync mode: 'expired_future' or 'all_active'.
+	 * @param string $mode Sync mode: 'expired_future', 'failing', or 'all_active'.
 	 * @param string $date Optional. Only sync subscriptions updated after this date.
 	 * @return array Array of subscription IDs.
 	 */
@@ -89,16 +115,42 @@ class EDD_Recurring_Sync_Processor {
 		$current_date = current_time( 'mysql' );
 
 		if ( 'expired_future' === $mode ) {
-			// Original mode: expired subscriptions with future expiration dates.
-			$sql = $wpdb->prepare(
-				"SELECT id FROM {$wpdb->prefix}edd_subscriptions
+			// Expired subscriptions with future expiration dates only.
+			$base_sql = "SELECT id FROM {$wpdb->prefix}edd_subscriptions
 				WHERE status = 'expired'
 				AND expiration > %s
 				AND gateway = 'stripe'
-				AND profile_id != ''
-				ORDER BY id ASC",
-				$current_date
-			);
+				AND profile_id != ''";
+
+			// Add date filter if provided.
+			if ( ! empty( $date ) ) {
+				$sql = $wpdb->prepare(
+					$base_sql . " AND date_created >= %s ORDER BY id ASC",
+					$current_date,
+					$date
+				);
+			} else {
+				$sql = $wpdb->prepare(
+					$base_sql . " ORDER BY id ASC",
+					$current_date
+				);
+			}
+		} elseif ( 'failing' === $mode ) {
+			// Failing subscriptions only.
+			$base_sql = "SELECT id FROM {$wpdb->prefix}edd_subscriptions
+				WHERE status = 'failing'
+				AND gateway = 'stripe'
+				AND profile_id != ''";
+
+			// Add date filter if provided.
+			if ( ! empty( $date ) ) {
+				$sql = $wpdb->prepare(
+					$base_sql . " AND date_created >= %s ORDER BY id ASC",
+					$date
+				);
+			} else {
+				$sql = $base_sql . " ORDER BY id ASC";
+			}
 		} else {
 			// New mode: all subscriptions (any status) to verify against Stripe.
 			$base_sql = "SELECT id FROM {$wpdb->prefix}edd_subscriptions
@@ -124,7 +176,7 @@ class EDD_Recurring_Sync_Processor {
 	/**
 	 * Get statistics about affected subscriptions.
 	 *
-	 * @param string $mode Sync mode: 'expired_future' or 'all_active'.
+	 * @param string $mode Sync mode: 'expired_future', 'failing', or 'all_active'.
 	 * @param string $date Optional. Only count subscriptions updated after this date.
 	 * @return array
 	 */
@@ -143,6 +195,13 @@ class EDD_Recurring_Sync_Processor {
 					AND profile_id != ''",
 					$current_date
 				)
+			);
+		} elseif ( 'failing' === $mode ) {
+			$total = $wpdb->get_var(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}edd_subscriptions
+				WHERE status = 'failing'
+				AND gateway = 'stripe'
+				AND profile_id != ''"
 			);
 		} else {
 			$base_sql = "SELECT COUNT(*) FROM {$wpdb->prefix}edd_subscriptions
@@ -546,7 +605,7 @@ class EDD_Recurring_Sync_Processor {
 	 * Initialize new log file.
 	 *
 	 * @param bool   $dry_run Whether this is a dry run.
-	 * @param string $sync_mode Sync mode: 'expired_future' or 'all_active'.
+	 * @param string $sync_mode Sync mode: 'expired_future', 'failing', or 'all_active'.
 	 * @param string $date Optional. Only sync subscriptions updated after this date.
 	 */
 	public function initialize_log( $dry_run = true, $sync_mode = 'expired_future', $date = '' ) {
@@ -568,7 +627,12 @@ class EDD_Recurring_Sync_Processor {
 		set_transient( 'edd_recurring_sync_ids', $subscription_ids, HOUR_IN_SECONDS );
 
 		$mode_label = $dry_run ? 'DRY RUN' : 'LIVE SYNC';
-		$sync_type  = 'expired_future' === $sync_mode ? 'Expired with Future Dates' : 'All Subscriptions (Full Audit)';
+		$sync_types = array(
+			'expired_future' => 'Expired with Future Dates',
+			'failing'        => 'Failing Subscriptions',
+			'all_active'     => 'All Subscriptions (Full Audit)',
+		);
+		$sync_type  = isset( $sync_types[ $sync_mode ] ) ? $sync_types[ $sync_mode ] : 'Unknown';
 
 		$header = sprintf(
 			"=== EDD Recurring Subscription Sync Log ===\n" .
@@ -585,9 +649,17 @@ class EDD_Recurring_Sync_Processor {
 
 		file_put_contents( $this->log_file, $header );
 
-		// Update last sync run timestamp for all_active mode.
-		if ( 'all_active' === $sync_mode && ! $dry_run ) {
-			update_option( 'edd_recurring_sync_last_run', current_time( 'mysql' ) );
+		// Update last sync run timestamp for each mode separately (for live sync only).
+		if ( ! $dry_run ) {
+			$option_names = array(
+				'expired_future' => 'edd_wpstg_subscription_sync_expired',
+				'failing'        => 'edd_wpstg_subscription_sync_failing',
+				'all_active'     => 'edd_wpstg_subscription_sync_all',
+			);
+
+			if ( isset( $option_names[ $sync_mode ] ) ) {
+				update_option( $option_names[ $sync_mode ], current_time( 'mysql' ) );
+			}
 		}
 	}
 

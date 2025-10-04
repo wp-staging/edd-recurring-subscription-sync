@@ -31,9 +31,17 @@
 			// Tab switching
 			$('.nav-tab').on('click', this.switchTab.bind(this));
 
-			// Date filter
+			// Date filter - All Active tab
 			$('#use-date-filter').on('change', this.toggleDateFilter.bind(this));
 			$('#use-last-sync-date').on('click', this.useLastSyncDate.bind(this));
+
+			// Date filter - Expired tab
+			$('#use-date-filter-expired').on('change', this.toggleDateFilterExpired.bind(this));
+			$('#use-last-sync-date-expired').on('click', this.useLastSyncDateExpired.bind(this));
+
+			// Date filter - Failing tab
+			$('#use-date-filter-failing').on('change', this.toggleDateFilterFailing.bind(this));
+			$('#use-last-sync-date-failing').on('click', this.useLastSyncDateFailing.bind(this));
 
 			// Sync buttons
 			$('.edd-sync-dry-run').on('click', this.startDryRun.bind(this));
@@ -86,11 +94,68 @@
 		},
 
 		/**
+		 * Toggle date filter for expired tab
+		 */
+		toggleDateFilterExpired: function(e) {
+			const $checkbox = $(e.currentTarget);
+			const isChecked = $checkbox.is(':checked');
+
+			$('#sync-date-filter-expired').prop('disabled', !isChecked);
+			$('#use-last-sync-date-expired').prop('disabled', !isChecked);
+		},
+
+		/**
+		 * Use last sync date for expired tab
+		 */
+		useLastSyncDateExpired: function(e) {
+			e.preventDefault();
+			const lastSyncDate = $('#sync-date-filter-expired').data('last-sync');
+			if (lastSyncDate) {
+				const datePart = lastSyncDate.split(' ')[0]; // Get Y-m-d part
+				$('#sync-date-filter-expired').val(datePart);
+			}
+		},
+
+		/**
+		 * Toggle date filter for failing tab
+		 */
+		toggleDateFilterFailing: function(e) {
+			const $checkbox = $(e.currentTarget);
+			const isChecked = $checkbox.is(':checked');
+
+			$('#sync-date-filter-failing').prop('disabled', !isChecked);
+			$('#use-last-sync-date-failing').prop('disabled', !isChecked);
+		},
+
+		/**
+		 * Use last sync date for failing tab
+		 */
+		useLastSyncDateFailing: function(e) {
+			e.preventDefault();
+			const lastSyncDate = $('#sync-date-filter-failing').data('last-sync');
+			if (lastSyncDate) {
+				const datePart = lastSyncDate.split(' ')[0]; // Get Y-m-d part
+				$('#sync-date-filter-failing').val(datePart);
+			}
+		},
+
+		/**
 		 * Get current date filter
 		 */
 		getDateFilter: function() {
-			if ($('#use-date-filter').is(':checked')) {
-				return $('#sync-date-filter').val() || '';
+			// Check which tab is active and get the appropriate date filter
+			if (this.currentMode === 'expired_future') {
+				if ($('#use-date-filter-expired').is(':checked')) {
+					return $('#sync-date-filter-expired').val() || '';
+				}
+			} else if (this.currentMode === 'failing') {
+				if ($('#use-date-filter-failing').is(':checked')) {
+					return $('#sync-date-filter-failing').val() || '';
+				}
+			} else if (this.currentMode === 'all_active') {
+				if ($('#use-date-filter').is(':checked')) {
+					return $('#sync-date-filter').val() || '';
+				}
 			}
 			return '';
 		},
