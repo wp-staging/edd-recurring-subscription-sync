@@ -1,14 +1,12 @@
-# Testing the 50% Bug Fix
+# Testing the Bug Fixes
 
 ## Quick Test
-Run all verification scripts:
+Run the comprehensive test:
 ```bash
-php tests/test-fix.php
-php tests/test-offset-drift.php
-php tests/test-count-mismatch.php
+php tests/test.php
 ```
 
-All three should show all tests passing.
+This test verifies all four bug fixes are working correctly.
 
 ## Manual Testing in WordPress
 
