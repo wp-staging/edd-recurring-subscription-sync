@@ -80,7 +80,7 @@ class EDD_Recurring_Sync_Ajax_Handler {
 		$date      = isset( $_POST['date'] ) ? sanitize_text_field( $_POST['date'] ) : '';
 
 		// Validate sync mode.
-		if ( ! in_array( $sync_mode, array( 'expired_future', 'all_active' ), true ) ) {
+		if ( ! in_array( $sync_mode, array( 'expired_future', 'failing', 'all_active' ), true ) ) {
 			$sync_mode = 'expired_future';
 		}
 
