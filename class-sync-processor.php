@@ -51,8 +51,7 @@ class EDD_Recurring_Sync_Processor {
 				AND expiration > %s
 				AND gateway = 'stripe'
 				AND profile_id != ''
-				ORDER BY id ASC
-				LIMIT 500",
+				ORDER BY id ASC",
 				$current_date
 			);
 		} else {
@@ -75,6 +74,51 @@ class EDD_Recurring_Sync_Processor {
 		$results = $wpdb->get_results( $sql );
 
 		return $results ? $results : array();
+	}
+
+	/**
+	 * Get subscription IDs for a sync session.
+	 *
+	 * @param string $mode Sync mode: 'expired_future' or 'all_active'.
+	 * @param string $date Optional. Only sync subscriptions updated after this date.
+	 * @return array Array of subscription IDs.
+	 */
+	private function get_subscription_ids( $mode = 'expired_future', $date = '' ) {
+		global $wpdb;
+
+		$current_date = current_time( 'mysql' );
+
+		if ( 'expired_future' === $mode ) {
+			// Original mode: expired subscriptions with future expiration dates.
+			$sql = $wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}edd_subscriptions
+				WHERE status = 'expired'
+				AND expiration > %s
+				AND gateway = 'stripe'
+				AND profile_id != ''
+				ORDER BY id ASC",
+				$current_date
+			);
+		} else {
+			// New mode: all subscriptions (any status) to verify against Stripe.
+			$base_sql = "SELECT id FROM {$wpdb->prefix}edd_subscriptions
+				WHERE gateway = 'stripe'
+				AND profile_id != ''";
+
+			// Add date filter if provided.
+			if ( ! empty( $date ) ) {
+				$sql = $wpdb->prepare(
+					$base_sql . " AND date_modified >= %s ORDER BY id ASC",
+					$date
+				);
+			} else {
+				$sql = $base_sql . " ORDER BY id ASC";
+			}
+		}
+
+		$results = $wpdb->get_col( $sql );
+
+		return $results ? array_map( 'intval', $results ) : array();
 	}
 
 	/**
@@ -173,55 +217,58 @@ class EDD_Recurring_Sync_Processor {
 	public function process_chunk( $offset = 0, $limit = 10, $dry_run = true ) {
 		global $wpdb;
 
-		// Get the stored sync parameters for this session.
-		$sync_mode = get_transient( 'edd_recurring_sync_mode' );
-		$date      = get_transient( 'edd_recurring_sync_date' );
+		// Get the stored subscription IDs for this session.
+		$all_ids = get_transient( 'edd_recurring_sync_ids' );
 
-		if ( empty( $sync_mode ) ) {
-			$sync_mode = 'expired_future';
-		}
-
-		// Build the query based on sync mode.
-		$current_date = current_time( 'mysql' );
-
-		if ( 'expired_future' === $sync_mode ) {
-			// Original mode: expired subscriptions with future expiration dates.
-			$sql = $wpdb->prepare(
-				"SELECT * FROM {$wpdb->prefix}edd_subscriptions
-				WHERE status = 'expired'
-				AND expiration > %s
-				AND gateway = 'stripe'
-				AND profile_id != ''
-				ORDER BY id ASC
-				LIMIT %d OFFSET %d",
-				$current_date,
-				$limit,
-				$offset
+		if ( empty( $all_ids ) || ! is_array( $all_ids ) ) {
+			// Fallback: If IDs aren't stored, return empty.
+			return array(
+				'processed' => 0,
+				'success'   => 0,
+				'errors'    => 0,
+				'results'   => array(),
 			);
-		} else {
-			// New mode: all subscriptions (any status) to verify against Stripe.
-			$base_sql = "SELECT * FROM {$wpdb->prefix}edd_subscriptions
-				WHERE gateway = 'stripe'
-				AND profile_id != ''";
-
-			// Add date filter if provided.
-			if ( ! empty( $date ) ) {
-				$sql = $wpdb->prepare(
-					$base_sql . " AND date_modified >= %s ORDER BY id ASC LIMIT %d OFFSET %d",
-					$date,
-					$limit,
-					$offset
-				);
-			} else {
-				$sql = $wpdb->prepare(
-					$base_sql . " ORDER BY id ASC LIMIT %d OFFSET %d",
-					$limit,
-					$offset
-				);
-			}
 		}
+
+		// Get the chunk of IDs to process.
+		$chunk_ids = array_slice( $all_ids, $offset, $limit );
+
+		// Debug logging
+		error_log( sprintf(
+			'EDD Sync - array_slice: total_ids=%d, offset=%d, limit=%d, chunk_ids_count=%d, chunk_ids=%s',
+			count( $all_ids ),
+			$offset,
+			$limit,
+			count( $chunk_ids ),
+			implode( ',', $chunk_ids )
+		) );
+
+		if ( empty( $chunk_ids ) ) {
+			return array(
+				'processed' => 0,
+				'success'   => 0,
+				'errors'    => 0,
+				'results'   => array(),
+			);
+		}
+
+		// Fetch subscriptions by ID.
+		// This prevents offset drift when records are updated and no longer match WHERE clauses.
+		// IMPORTANT: Build IN clause directly with intval() for safety, since wpdb->prepare()
+		// doesn't accept arrays. We use array_map('intval') to ensure all IDs are integers.
+		$ids_string = implode( ',', array_map( 'intval', $chunk_ids ) );
+		$sql        = "SELECT * FROM {$wpdb->prefix}edd_subscriptions
+			WHERE id IN ($ids_string)
+			ORDER BY id ASC";
 
 		$subscriptions = $wpdb->get_results( $sql );
+
+		// Debug logging
+		error_log( sprintf(
+			'EDD Sync - DB query: chunk_ids=%s, returned=%d subscriptions',
+			implode( ',', $chunk_ids ),
+			count( $subscriptions )
+		) );
 
 		if ( empty( $subscriptions ) ) {
 			return array(
@@ -238,6 +285,12 @@ class EDD_Recurring_Sync_Processor {
 			'errors'    => 0,
 			'results'   => array(),
 		);
+
+		// Get sync mode for processing.
+		$sync_mode = get_transient( 'edd_recurring_sync_mode' );
+		if ( empty( $sync_mode ) ) {
+			$sync_mode = 'expired_future';
+		}
 
 		foreach ( $subscriptions as $sub_data ) {
 			$result = $this->process_single_subscription( $sub_data, $dry_run, $sync_mode );
@@ -504,9 +557,15 @@ class EDD_Recurring_Sync_Processor {
 
 		$this->log_file = $this->get_log_file_path();
 
-		// Store the sync parameters for this session instead of all IDs.
+		// Store the sync parameters for this session.
 		set_transient( 'edd_recurring_sync_mode', $sync_mode, HOUR_IN_SECONDS );
 		set_transient( 'edd_recurring_sync_date', $date, HOUR_IN_SECONDS );
+
+		// CRITICAL: Store all subscription IDs upfront to prevent offset drift
+		// When we update subscriptions (e.g., expired -> active), they may no longer
+		// match the WHERE clause, causing pagination to skip records.
+		$subscription_ids = $this->get_subscription_ids( $sync_mode, $date );
+		set_transient( 'edd_recurring_sync_ids', $subscription_ids, HOUR_IN_SECONDS );
 
 		$mode_label = $dry_run ? 'DRY RUN' : 'LIVE SYNC';
 		$sync_type  = 'expired_future' === $sync_mode ? 'Expired with Future Dates' : 'All Subscriptions (Full Audit)';
