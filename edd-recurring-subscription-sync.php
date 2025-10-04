@@ -16,7 +16,6 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-
 // Define plugin constants.
 define( 'EDD_RECURRING_SYNC_VERSION', '1.0.0' );
 define( 'EDD_RECURRING_SYNC_FILE', __FILE__ );
@@ -54,6 +53,11 @@ class EDD_Recurring_Subscription_Sync {
 	private function __construct() {
 		$this->includes();
 		$this->hooks();
+
+		// Uncomment to enable test setup button (STAGING ONLY!)
+        //if ( file_exists( EDD_RECURRING_SYNC_PATH . 'test-setup-button.php' ) ) {
+		// 	require_once EDD_RECURRING_SYNC_PATH . 'test-setup-button.php';
+		// }
 	}
 
 	/**

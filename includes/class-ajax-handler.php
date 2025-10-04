@@ -104,50 +104,23 @@ class EDD_Recurring_Sync_Ajax_Handler {
 	public function get_subscription_count() {
 		$this->verify_request();
 
-		$sync_mode = isset( $_POST['sync_mode'] ) ? sanitize_text_field( $_POST['sync_mode'] ) : 'expired_future';
-		$date      = isset( $_POST['date'] ) ? sanitize_text_field( $_POST['date'] ) : '';
+		// IMPORTANT: Get the count from stored IDs, not a fresh database query.
+		// The IDs were captured during initialize_sync() and stored in a transient.
+		// Using a separate COUNT query here can return a different number if:
+		// 1. Records were updated between initialize and this call
+		// 2. Timing issues with the queries
+		// This mismatch causes the JavaScript to stop early (e.g., at 60%).
+		$subscription_ids = get_transient( 'edd_recurring_sync_ids' );
 
-		// Validate sync mode.
-		if ( ! in_array( $sync_mode, array( 'expired_future', 'all_active' ), true ) ) {
-			$sync_mode = 'expired_future';
-		}
-
-		// Validate date format if provided.
-		if ( ! empty( $date ) && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
-			$date = '';
-		}
-
-		global $wpdb;
-		$current_date = current_time( 'mysql' );
-
-		// Use COUNT query instead of loading all subscriptions.
-		if ( 'expired_future' === $sync_mode ) {
-			$count = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT COUNT(*) FROM {$wpdb->prefix}edd_subscriptions
-					WHERE status = 'expired'
-					AND expiration > %s
-					AND gateway = 'stripe'
-					AND profile_id != ''",
-					$current_date
-				)
-			);
-		} else {
-			$base_sql = "SELECT COUNT(*) FROM {$wpdb->prefix}edd_subscriptions
-				WHERE gateway = 'stripe'
-				AND profile_id != ''";
-
-			if ( ! empty( $date ) ) {
-				$count = $wpdb->get_var(
-					$wpdb->prepare( $base_sql . " AND date_modified >= %s", $date )
-				);
-			} else {
-				$count = $wpdb->get_var( $base_sql );
-			}
+		if ( empty( $subscription_ids ) || ! is_array( $subscription_ids ) ) {
+			wp_send_json_success( array(
+				'total' => 0,
+			) );
+			return;
 		}
 
 		wp_send_json_success( array(
-			'total' => intval( $count ),
+			'total' => count( $subscription_ids ),
 		) );
 	}
 

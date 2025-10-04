@@ -55,6 +55,15 @@ class EDD_Recurring_Sync_Admin_Page {
 				<a href="#" class="nav-tab" data-tab="all-active"><?php esc_html_e( 'All Subscriptions (Full Audit)', 'edd-recurring-sync' ); ?></a>
 			</h2>
 
+			<?php
+			/**
+			 * Hook after tabs - can be used for test/debug buttons
+			 *
+			 * @since 1.0.0
+			 */
+			do_action( 'edd_recurring_sync_after_tabs' );
+			?>
+
 			<!-- Tab Content: Expired Future -->
 			<div class="tab-content" id="tab-expired-future">
 				<?php if ( $stats_expired['total'] === 0 ) : ?>
